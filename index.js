@@ -52,40 +52,60 @@ function uncoverCell(row, col, grid) {
   }
 }
 
-function playMinesweeper(size, numMines) {
-  const minefield = generateMinefield(size, numMines);
-  const uncoveredGrid = Array.from({ length: size }, () => Array(size).fill('#'));
+function convertPositionToIndices(position) {
+  const column = position.charCodeAt(0) - 'A'.charCodeAt(0);
+  const row = parseInt(position.substring(1)) - 1;
+  return { row, column };
+}
 
-  function gameLoop() {
-    printGrid(uncoveredGrid);
-    
-    rl.question('Enter row and column (e.g., "1 2"): ', input => {
-      const [row, col] = input.split(' ').map(Number);
+function playMinesweeper() {
+  rl.question('Enter grid size: ', sizeInput => {
+    const size = parseInt(sizeInput, 10);
 
-      if (minefield[row][col] === -1) {
-        console.log('Game over! You hit a mine.');
-        printGrid(minefield);
-        rl.close();
-      } else {
-        uncoverCell(row, col, uncoveredGrid);
-        const isGameWon = uncoveredGrid.flat().every(cell => cell === '#' || cell === '.');
+    rl.question('Enter number of mines: ', numMinesInput => {
+      const numMines = parseInt(numMinesInput, 10);
 
-        if (isGameWon) {
-          console.log('Congratulations! You won the game!');
-          printGrid(minefield);
-          rl.close();
-        } else {
-          gameLoop();
-        }
+      const minefield = generateMinefield(size, numMines);
+      const uncoveredGrid = Array.from({ length: size }, () => Array(size).fill('#'));
+
+      function gameLoop() {
+        printGrid(uncoveredGrid);
+
+        rl.question('Enter position (e.g., "A1", "B2"): ', input => {
+          const { row, column } = convertPositionToIndices(input.toUpperCase());
+
+          if (row >= 0 && row < size && column >= 0 && column < size) {
+            if (minefield[row][column] === -1) {
+              console.log('Game over! You hit a mine.');
+              printGrid(minefield);
+              rl.close();
+            } else {
+              uncoverCell(row, column, uncoveredGrid);
+              const isGameWon = uncoveredGrid.flat().every(cell => cell === '#' || cell === '.');
+
+              if (isGameWon) {
+                console.log('Congratulations! You won the game!');
+                printGrid(minefield);
+                rl.close();
+              } else {
+                console.log('Press any key to continue...');
+                rl.input.emit('keypress', null, { name: 'anyKey' }); // Simulate keypress event
+                rl.once('anyKey', () => {
+                  gameLoop();
+                });
+              }
+            }
+          } else {
+            console.log('Invalid position. Please enter a valid position.');
+            gameLoop();
+          }
+        });
       }
-    });
-  }
 
-  gameLoop();
+      gameLoop();
+    });
+  });
 }
 
 console.log('Welcome to Minesweeper!');
-rl.question('Enter grid size and number of mines (e.g., "5 10"): ', input => {
-  const [size, numMines] = input.split(' ').map(Number);
-  playMinesweeper(size, numMines);
-});
+playMinesweeper();
